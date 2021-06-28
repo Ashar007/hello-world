@@ -1,0 +1,80 @@
+private boolean checkUserIsInGroup(HttpServletRequest request)  
+      throws ServletException, IOException {
+   boolean isInGroup = false;  
+  
+   String userName = request.getParameter("UserName");
+   String userFilter = String.format("(&(objectCategory=user)(CN=%s)(memberOf=%s))", userName, APPADMIN_GROUP_DN);
+   try {
+      DirContext ctx = new InitialLdapContext(getLdapEnvironment(), null);
+     
+      SearchControls searchCtl = new SearchControls();
+      searchCtl.setSearchScope(SearchControls.SUBTREE_SCOPE);
+      String attribNames[] = {"sAMAccountName", "memberOf"};
+      searchCtl.setReturningAttributes(attribNames);
+      NamingEnumeration found = ctx.search(LDAP_SEARCH_BASE, userFilter, searchCtl);
+      while (found.hasMoreElements()) {
+         SearchResult entry = (SearchResult)found.next();
+         if (entry != null) {
+            isInGroup = true;
+         }
+      }
+      ctx.close();
+   } catch (Exception ex) {
+      handleExceptions(ex);
+   }
+  
+   return isInGroup;
+}
+
+
+
+
+String query = "SELECT username FROM users WHERE id = ?";
+PreparedStatement pstmt = con.prepareStatement(query);
+pstmt.setInt(userID, 1);
+ResultSet resultSet = pstmt.executeQuery();
+resultSet.next();
+path = resultSet.getString(1);
+con.close();
+File file = new File(path);
+Scanner scanner = new Scanner(file);
+System.out.println(scanner.nextLine());
+scanner.close();
+
+
+
+public int getUserIdStandardAPI(HttpServletRequest request)  
+      throws ServletException, IOException {
+   int userId = 0;
+  
+   String userName = request.getParameter("UserName");
+   String sqlStoredProc = "{call getUserId (?, ?)}";
+   try {
+      Connection conn = getConnection();  
+      CallableStatement stmt = conn.prepareCall(sqlStoredProc);  
+     
+      stmt.setString(1, userName);     
+      stmt.registerOutParameter(2, java.sql.Types.INTEGER);
+      stmt.execute();
+      userId = stmt.getInt(2);
+   } catch (SQLException ex) {
+      handleExceptions(ex);
+   }
+   finally {
+      closeQuietly(stmt);
+      closeQuietly(conn);
+   }
+  
+   return userId;
+}
+
+
+
+public class ShopServlet extends HttpServlet {
+   private User user;
+   protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+      HttpSession session = request.getSession(true);
+      user = (User) session.getAttribute("user");
+     
+   }
+}
